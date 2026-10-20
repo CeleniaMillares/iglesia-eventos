@@ -80,17 +80,30 @@
                             </dialog>
                         @endif
 
-                        @if($evento->estado == 'aprobado' && auth()->user()->tieneAlgunRol(['Comité de Eventos', 'Administrador']))
-                            <form action="{{ route('eventos.planificar', $evento) }}" method="POST" class="w-full">
-                                @csrf
-                                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-1.5 rounded text-sm font-semibold transition">Marcar como Planificado</button>
-                            </form>
+                        @if($evento->estado == 'aprobado' && auth()->user()->tieneAlgunRol(['Secretaría', 'Administrador']))
+                            <a href="{{ route('convocatorias.create', $evento) }}" class="block text-center w-full bg-blue-600 hover:bg-blue-700 text-white py-1.5 rounded text-sm font-semibold transition">
+                                Enviar Convocatoria
+                            </a>
                         @endif
 
-                        @if($evento->estado == 'planificado' && auth()->user()->tieneAlgunRol(['Secretaría', 'Administrador']))
-                            <!-- Aquí iría la ruta de convocatorias que veremos luego -->
-                            <button class="w-full bg-blue-100 text-blue-700 py-1.5 rounded text-sm font-semibold cursor-not-allowed" disabled>Listo para Convocatoria</button>
-                        @endif
+                    @if($evento->estado == 'planificado' && auth()->user()->tieneAlgunRol(['Secretaría', 'Administrador']))
+                        <!-- Botón para finalizar -->
+                        <form action="{{ route('eventos.finalizar', $evento) }}" method="POST" class="w-full">
+                            @csrf
+                            <button type="submit" class="w-full bg-gray-800 hover:bg-gray-900 text-white py-1.5 rounded text-sm font-semibold transition">
+                                Finalizar Evento
+                            </button>
+                           
+                        </form>
+                        
+                    @endif
+
+                    @if($evento->estado == 'finalizado')
+                        <!-- Botón para descargar el PDF -->
+                        <a href="{{ route('eventos.acta', $evento) }}" class="block text-center w-full bg-red-600 hover:bg-red-700 text-white py-1.5 rounded text-sm font-semibold transition">
+                            Descargar Acta PDF
+                        </a>
+                    @endif
                     </div>
                 </div>
             </div>

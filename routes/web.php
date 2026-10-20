@@ -30,11 +30,31 @@ Route::middleware('auth')->group(function () {
         Route::post('/eventos/{evento}/aprobar', [EventoController::class, 'aprobar'])->name('eventos.aprobar');
         Route::post('/eventos/{evento}/rechazar', [EventoController::class, 'rechazar'])->name('eventos.rechazar');
     });
-    
+
+        // Finalizar evento (Secretaría o Admin)
+    Route::middleware(['role:Secretaría,Administrador'])->group(function () {
+        Route::post('/eventos/{evento}/finalizar', [\App\Http\Controllers\EventoController::class, 'finalizar'])->name('eventos.finalizar');
+        Route::get('/eventos/{evento}/acta', [\App\Http\Controllers\ReporteController::class, 'acta'])->name('eventos.acta');
+    });
+
        // Rutas para Miembros (Secretaría y Admin)
     Route::middleware(['role:Secretaría,Administrador'])->group(function () {
         Route::get('/miembros', [\App\Http\Controllers\MiembroController::class, 'index'])->name('miembros.index');
         Route::post('/miembros/{user}/verificar', [\App\Http\Controllers\MiembroController::class, 'verificar'])->name('miembros.verificar');
+        Route::get('/eventos/{evento}/convocatoria', [\App\Http\Controllers\ConvocatoriaController::class, 'create'])->name('convocatorias.create');
+        Route::post('/eventos/{evento}/convocatoria', [\App\Http\Controllers\ConvocatoriaController::class, 'store'])->name('convocatorias.store');
+    });
+
+        Route::middleware(['role:Secretaría,Administrador'])->group(function () {
+        // Convocatorias
+        Route::get('/convocatorias', [\App\Http\Controllers\ConvocatoriaController::class, 'index'])->name('convocatorias.index');
+        Route::get('/eventos/{evento}/convocatoria', [\App\Http\Controllers\ConvocatoriaController::class, 'create'])->name('convocatorias.create');
+        Route::post('/eventos/{evento}/convocatoria', [\App\Http\Controllers\ConvocatoriaController::class, 'store'])->name('convocatorias.store');
+
+        // Reportes
+        Route::get('/reportes', [\App\Http\Controllers\ReporteController::class, 'index'])->name('reportes.index');
+        Route::post('/eventos/{evento}/finalizar', [\App\Http\Controllers\EventoController::class, 'finalizar'])->name('eventos.finalizar');
+        Route::get('/eventos/{evento}/acta', [\App\Http\Controllers\ReporteController::class, 'acta'])->name('eventos.acta');
     });
 
     // Rutas para Usuarios (Solo Admin)

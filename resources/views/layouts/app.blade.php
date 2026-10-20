@@ -46,6 +46,21 @@
                     </a>
                     @endif
 
+                      <!-- Convocatorias (Solo Secretaría y Admin) -->
+                    @if(Auth::user()->tieneAlgunRol(['Administrador', 'Secretaría']))
+                    <a href="{{ route('convocatorias.index') }}" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-white transition {{ request()->routeIs('convocatorias.*') ? 'bg-slate-700 text-white border-l-4 border-blue-500' : '' }}">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        Convocatorias
+                    </a>
+                    
+                    <!-- Reportes (Solo Secretaría y Admin) -->
+                    <a href="{{ route('reportes.index') }}" class="flex items-center px-4 py-3 rounded-lg hover:bg-slate-700 hover:text-white transition {{ request()->routeIs('reportes.*') ? 'bg-slate-700 text-white border-l-4 border-blue-500' : '' }}">
+                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Reportes y Actas
+                    </a>
+                    @endif   
+
+
                     <!-- Panel Admin (Solo Administrador) -->
                     @if(Auth::user()->tieneAlgunRol(['Administrador']))
                     <div class="pt-4 pb-2">

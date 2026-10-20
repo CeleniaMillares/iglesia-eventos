@@ -106,4 +106,15 @@ class EventoController extends Controller
 
         return back()->with('success', 'Evento planificado. Ahora la Secretaría puede enviar convocatorias.');
     }
+
+        public function finalizar(Evento $evento)
+    {
+        if (!Auth::user()->tieneAlgunRol(['Secretaría', 'Administrador'])) {
+             abort(403);
+        }
+        
+        $evento->update(['estado' => 'finalizado']);
+        return back()->with('success', 'Evento finalizado. El acta en PDF ya está disponible.');
+    }
+
 }
