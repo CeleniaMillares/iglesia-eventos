@@ -30,15 +30,19 @@ class User extends Authenticatable
         ];
     }
 
+    // Relación con Roles
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'role_user');
     }
 
+    // Relación con Miembro
     public function miembro()
     {
         return $this->hasOne(Miembro::class);
     }
+
+    // --- MÉTODOS DE VERIFICACIÓN DE ROLES ---
 
     public function tieneRol(string $nombreRol): bool
     {
