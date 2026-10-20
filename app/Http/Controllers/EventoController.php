@@ -9,23 +9,26 @@ use Illuminate\Support\Facades\DB;
 
 class EventoController extends Controller
 {
-    // Listar eventos con paginación (Evita consultas N+1 usando with)
     public function index()
     {
-        $eventos = Evento::with('creador')
-            ->orderBy('fecha_inicio', 'desc')
-            ->paginate(10); 
-            
+        $user = Auth::user();
+        
+        // Si es Comité, solo ve sus propios eventos creados
+        if ($user->tieneAlgunRol(['Comité de Eventos'])) {
+            $eventos = Evento::where('user_creador_id', $user->id)->orderBy('fecha_inicio', 'desc')->paginate(10);
+        } else {
+            // Pastor, Secretaría y Admin ven todos
+            $eventos = Evento::with('creador')->orderBy('fecha_inicio', 'desc')->paginate(10);
+        }
+
         return view('eventos.index', compact('eventos'));
     }
 
-    // Mostrar formulario de creación
     public function create()
     {
         return view('eventos.create');
     }
 
-    // Guardar evento (Validaciones estrictas contra XSS e Inyección SQL)
     public function store(Request $request)
     {
         $validatedData = $request->validate([
@@ -35,7 +38,7 @@ class EventoController extends Controller
             'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
             'hora' => ['nullable', 'date_format:H:i'],
             'lugar' => ['required', 'string', 'max:100'],
-            'objetivos' => ['nullable', 'string', 'max:1000'],
+            'objetivos' => ['required', 'string', 'max:1000'], // RN-02: Obligatorio
             'capacidad_maxima' => ['nullable', 'integer', 'min:0'],
         ]);
 
@@ -50,7 +53,7 @@ class EventoController extends Controller
             DB::commit();
 
             return redirect()->route('eventos.index')
-                ->with('success', 'Evento propuesto. Esperando aprobación del Pastor.');
+                ->with('success', 'Evento propuesto exitosamente. Esperando aprobación del Pastor.');
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -58,26 +61,49 @@ class EventoController extends Controller
         }
     }
 
-        // Aprobar Evento (Solo Pastor)
     public function aprobar(Evento $evento)
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        // Verificación de seguridad usando el método real
-        if (!$user->tieneAlgunRol(['Pastor Principal', 'Administrador'])) {
-             abort(403, 'No autorizado para aprobar eventos.');
+        if (!Auth::user()->tieneAlgunRol(['Pastor Principal', 'Administrador'])) {
+             abort(403, 'No autorizado.');
         }
 
-        try {
-            $evento->update([
-                'estado' => 'aprobado',
-                'user_aprobador_id' => $user->id
-            ]);
+        $evento->update([
+            'estado' => 'aprobado',
+            'user_aprobador_id' => Auth::id()
+        ]);
 
-            return back()->with('success', 'Evento aprobado exitosamente.');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Error al aprobar: ' . $e->getMessage());
+        return back()->with('success', 'Evento aprobado. El Comité ya puede planificar.');
+    }
+
+    public function rechazar(Request $request, Evento $evento)
+    {
+        if (!Auth::user()->tieneAlgunRol(['Pastor Principal', 'Administrador'])) {
+             abort(403, 'No autorizado.');
         }
+
+        $request->validate(['motivo_rechazo' => 'required|string|max:500']);
+
+        $evento->update([
+            'estado' => 'rechazado',
+            'motivo_rechazo' => $request->motivo_rechazo,
+            'user_aprobador_id' => Auth::id()
+        ]);
+
+        return back()->with('success', 'Evento rechazado y notificado al Comité.');
+    }
+
+    public function planificar(Evento $evento)
+    {
+        if (!Auth::user()->tieneAlgunRol(['Comité de Eventos', 'Administrador'])) {
+             abort(403, 'No autorizado.');
+        }
+
+        if ($evento->estado !== 'aprobado') {
+            return back()->with('error', 'Solo se pueden planificar eventos aprobados.');
+        }
+
+        $evento->update(['estado' => 'planificado']);
+
+        return back()->with('success', 'Evento planificado. Ahora la Secretaría puede enviar convocatorias.');
     }
 }
