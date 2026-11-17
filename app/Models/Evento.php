@@ -15,7 +15,7 @@ class Evento extends Model
         'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'hora', 
         'lugar', 'objetivos', 'estado', 'motivo_rechazo', 
         'capacidad_maxima', 'user_creador_id', 'user_aprobador_id',
-        'duracion_dias', 'tipo_evento', 'responsable_principal_id'
+        'duracion_dias', 'tipo_evento', 'responsable_principal_id', 'cronograma'
     ];
 
     protected function casts(): array
@@ -40,6 +40,11 @@ class Evento extends Model
     public function confirmaciones()
     {
         return $this->hasMany(ConfirmacionAsistencia::class);
+    }
+
+    public function actas()
+    {
+        return $this->hasMany(ActaEvento::class);
     }
 
     public function tieneCupo(): bool
