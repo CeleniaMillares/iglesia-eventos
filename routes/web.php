@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\EventoController;
+use App\Http\Controllers\ConfirmacionAsistenciaController;
+use App\Models\Evento;
+use App\Models\Miembro;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -19,6 +22,7 @@ Route::middleware('auth')->group(function () {
 
     // Rutas de Eventos
     Route::get('/eventos', [EventoController::class, 'index'])->name('eventos.index');
+    Route::post('/confirmaciones', [ConfirmacionAsistenciaController::class, 'store'])->name('confirmaciones.store');
 
     Route::middleware(['role:Comité de Eventos,Administrador'])->group(function () {
         Route::get('/eventos/crear', [EventoController::class, 'create'])->name('eventos.create');

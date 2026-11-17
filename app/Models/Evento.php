@@ -9,6 +9,8 @@ class Evento extends Model
 {
     use HasFactory;
 
+    public const ESTADOS_CONFIRMABLES = ['aprobado', 'planificado'];
+
     protected $fillable = [
         'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'hora', 
         'lugar', 'objetivos', 'estado', 'motivo_rechazo', 

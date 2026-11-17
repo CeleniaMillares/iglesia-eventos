@@ -104,6 +104,15 @@
                             Descargar Acta PDF
                         </a>
                     @endif
+                        @if(auth()->user()->tieneRol('Miembro') && in_array($evento->estado, $evento::ESTADOS_CONFIRMABLES, true))
+                            <form action="{{ route('confirmaciones.store') }}" method="POST" class="w-full">
+                                @csrf
+                                <input type="hidden" name="evento_id" value="{{ $evento->id }}">
+                                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded text-sm font-semibold transition">
+                                    Confirmar asistencia
+                                </button>
+                            </form>
+                        @endif
                     </div>
                 </div>
             </div>
