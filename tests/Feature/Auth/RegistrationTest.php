@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,8 +20,10 @@ class RegistrationTest extends TestCase
 
     public function test_new_users_can_register(): void
     {
+        $miembroRole = Role::create(['nombre' => 'Miembro']);
+
         $response = $this->post('/register', [
-            'name' => 'Test User',
+            'nombre' => 'Test User',
             'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
@@ -27,5 +31,32 @@ class RegistrationTest extends TestCase
 
         $this->assertAuthenticated();
         $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertDatabaseHas('users', [
+            'nombre' => 'Test User',
+            'email' => 'test@example.com',
+            'estado' => 'pendiente',
+        ]);
+        $user = User::where('email', 'test@example.com')->firstOrFail();
+        $this->assertDatabaseHas('miembros', [
+            'user_id' => $user->id,
+            'estado_miembro' => 'pendiente',
+        ]);
+        $this->assertDatabaseHas('role_user', [
+            'user_id' => $user->id,
+            'role_id' => $miembroRole->id,
+        ]);
+    }
+
+    public function test_registration_creates_the_member_role_if_it_has_not_been_seeded(): void
+    {
+        $this->post('/register', [
+            'nombre' => 'Test User',
+            'email' => 'test@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertRedirect(route('dashboard', absolute: false));
+
+        $this->assertDatabaseHas('roles', ['nombre' => 'Miembro']);
+        $this->assertDatabaseHas('miembros', ['estado_miembro' => 'pendiente']);
     }
 }
