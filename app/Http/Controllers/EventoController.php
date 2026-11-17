@@ -63,7 +63,7 @@ class EventoController extends Controller
 
     public function aprobar(Evento $evento)
     {
-        if (!Auth::user()->tieneAlgunRol(['Pastor Principal', 'Administrador'])) {
+        if (!Auth::user()->tieneAlgunRol(['Pastor Principal'])) {
              abort(403, 'No autorizado.');
         }
 
@@ -77,7 +77,7 @@ class EventoController extends Controller
 
     public function rechazar(Request $request, Evento $evento)
     {
-        if (!Auth::user()->tieneAlgunRol(['Pastor Principal', 'Administrador'])) {
+        if (!Auth::user()->tieneAlgunRol(['Pastor Principal'])) {
              abort(403, 'No autorizado.');
         }
 

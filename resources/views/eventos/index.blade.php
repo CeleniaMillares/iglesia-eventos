@@ -58,7 +58,7 @@
 
                     <!-- Botones de Acción según Rol y Estado -->
                     <div class="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
-                        @if($evento->estado == 'pendiente' && auth()->user()->tieneAlgunRol(['Pastor Principal', 'Administrador']))
+                        @if($evento->estado == 'pendiente' && auth()->user()->tieneAlgunRol(['Pastor Principal']))
                             <form action="{{ route('eventos.aprobar', $evento) }}" method="POST" class="flex-1">
                                 @csrf
                                 <button type="submit" class="w-full bg-green-500 hover:bg-green-600 text-white py-1.5 rounded text-sm font-semibold transition">Aprobar</button>
