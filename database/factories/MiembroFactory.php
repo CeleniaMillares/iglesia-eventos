@@ -20,11 +20,12 @@ class MiembroFactory extends Factory
             'estado_miembro' => 'activo',
             'tipo_sangre' => fake()->randomElement(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']),
             'numero_referencia' => fake()->unique()->numerify('########'),
+            'foto' => 'miembros/'.fake()->uuid().'.jpg',
             'contacto_emergencia' => fake()->name(),
             'telefono_emergencia' => fake()->phoneNumber(),
             'estado_civil' => fake()->randomElement(['soltero', 'casado', 'divorciado', 'viudo']),
-            'conyuge' => null,
-            'hijos' => 0,
+            'conyuge' => fake()->optional()->name(),
+            'hijos' => fake()->numberBetween(0, 5),
             'profesion' => fake()->jobTitle(),
         ];
     }
