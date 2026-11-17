@@ -10,7 +10,20 @@ class Miembro extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'telefono', 'direccion', 'fecha_nacimiento', 'estado_miembro'
+        'user_id',
+        'telefono',
+        'direccion',
+        'fecha_nacimiento',
+        'estado_miembro',
+        'tipo_sangre',
+        'numero_referencia',
+        'foto',
+        'contacto_emergencia',
+        'telefono_emergencia',
+        'estado_civil',
+        'conyuge',
+        'hijos',
+        'profesion',
     ];
 
     protected $casts = [

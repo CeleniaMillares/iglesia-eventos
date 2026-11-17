@@ -14,7 +14,8 @@ class Evento extends Model
     protected $fillable = [
         'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'hora', 
         'lugar', 'objetivos', 'estado', 'motivo_rechazo', 
-        'capacidad_maxima', 'user_creador_id', 'user_aprobador_id'
+        'capacidad_maxima', 'user_creador_id', 'user_aprobador_id',
+        'duracion_dias', 'tipo_evento', 'responsable_principal_id'
     ];
 
     protected function casts(): array
@@ -29,6 +30,11 @@ class Evento extends Model
     public function creador()
     {
         return $this->belongsTo(User::class, 'user_creador_id');
+    }
+
+    public function responsablePrincipal()
+    {
+        return $this->belongsTo(User::class, 'responsable_principal_id');
     }
 
     public function confirmaciones()
