@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Evento;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\View\View;
 
 class EventoController extends Controller
 {
@@ -27,6 +30,33 @@ class EventoController extends Controller
     public function create()
     {
         return view('eventos.create');
+    }
+
+    public function edit(Evento $evento): View
+    {
+        Gate::authorize('update', $evento);
+
+        return view('eventos.edit', compact('evento'));
+    }
+
+    public function update(Request $request, Evento $evento): RedirectResponse
+    {
+        Gate::authorize('update', $evento);
+
+        $validatedData = $request->validate([
+            'nombre' => ['required', 'string', 'max:100'],
+            'descripcion' => ['nullable', 'string', 'max:1000'],
+            'fecha_inicio' => ['required', 'date', 'after_or_equal:today'],
+            'fecha_fin' => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
+            'hora' => ['nullable', 'date_format:H:i'],
+            'lugar' => ['required', 'string', 'max:100'],
+            'objetivos' => ['required', 'string', 'max:1000'],
+            'capacidad_maxima' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $evento->update($validatedData);
+
+        return redirect()->route('eventos.index')->with('success', 'Evento actualizado exitosamente.');
     }
 
     public function store(Request $request)

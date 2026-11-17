@@ -30,6 +30,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/eventos/{evento}/planificar', [EventoController::class, 'planificar'])->name('eventos.planificar');
     });
 
+    Route::middleware(['role:Comité de Eventos,Secretaría'])->group(function () {
+        Route::get('/eventos/{evento}/editar', [EventoController::class, 'edit'])->name('eventos.edit');
+        Route::put('/eventos/{evento}', [EventoController::class, 'update'])->name('eventos.update');
+    });
+
     Route::middleware(['role:Pastor Principal'])->group(function () {
         Route::post('/eventos/{evento}/aprobar', [EventoController::class, 'aprobar'])->name('eventos.aprobar');
         Route::post('/eventos/{evento}/rechazar', [EventoController::class, 'rechazar'])->name('eventos.rechazar');

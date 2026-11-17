@@ -7,6 +7,12 @@ use App\Models\User;
 
 class EventoPolicy
 {
+    public function update(User $user, Evento $evento): bool
+    {
+        return $evento->estado === 'pendiente'
+            && $user->tieneAlgunRol(['Comité de Eventos', 'Secretaría']);
+    }
+
     public function confirmar(User $user, Evento $evento): bool
     {
         return $user->estado === 'activo'

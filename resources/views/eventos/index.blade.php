@@ -58,6 +58,11 @@
 
                     <!-- Botones de Acción según Rol y Estado -->
                     <div class="flex space-x-2 mt-4 pt-4 border-t border-gray-100">
+                        @if($evento->estado === 'pendiente' && auth()->user()->tieneAlgunRol(['Comité de Eventos', 'Secretaría']))
+                            <a href="{{ route('eventos.edit', $evento) }}" class="block text-center w-full bg-amber-50 hover:bg-amber-100 text-amber-800 py-1.5 rounded text-sm font-semibold transition">
+                                Editar Evento
+                            </a>
+                        @endif
                         @if($evento->estado == 'pendiente' && auth()->user()->tieneAlgunRol(['Pastor Principal']))
                             <form action="{{ route('eventos.aprobar', $evento) }}" method="POST" class="flex-1">
                                 @csrf
