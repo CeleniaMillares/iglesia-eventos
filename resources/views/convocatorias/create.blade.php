@@ -11,6 +11,9 @@
                 <div class="mb-6">
                     <label class="block text-gray-700 font-bold mb-2">Asunto del Correo <span class="text-red-500">*</span></label>
                     <input type="text" name="asunto" value="Invitación: {{ $evento->nombre }}" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500" required>
+                    @error('asunto')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-6">
@@ -20,6 +23,9 @@
 Los invitamos cordialmente a nuestro evento "{{ $evento->nombre }}" que se realizará el día {{ $evento->fecha_inicio->format('d/m/Y') }} en {{ $evento->lugar }}.
 
 ¡Esperamos contar con su presencia!</textarea>
+                    @error('mensaje')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="bg-blue-50 text-blue-800 p-4 rounded-lg mb-6 text-sm">

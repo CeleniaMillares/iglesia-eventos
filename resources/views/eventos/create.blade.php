@@ -25,20 +25,32 @@
                 <div class="mb-6">
                     <label class="block text-gray-700 font-bold mb-2">Nombre del Evento <span class="text-red-500">*</span></label>
                     <input type="text" name="nombre" value="{{ old('nombre') }}" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500" required placeholder="Ej. Vigilia de Jóvenes">
+                    @error('nombre')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                     <div>
                         <label class="block text-gray-700 font-bold mb-2">Fecha de Inicio <span class="text-red-500">*</span></label>
                         <input type="date" name="fecha_inicio" value="{{ old('fecha_inicio') }}" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500" required>
+                        @error('fecha_inicio')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                     <div>
                         <label class="block text-gray-700 font-bold mb-2">Fecha de Fin (Opcional)</label>
                         <input type="date" name="fecha_fin" value="{{ old('fecha_fin') }}" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500">
+                        @error('fecha_fin')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                     <div>
                         <label class="block text-gray-700 font-bold mb-2">Hora (Opcional)</label>
                         <input type="time" name="hora" value="{{ old('hora') }}" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500">
+                        @error('hora')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 
@@ -46,21 +58,33 @@
                     <div>
                         <label class="block text-gray-700 font-bold mb-2">Lugar <span class="text-red-500">*</span></label>
                         <input type="text" name="lugar" value="{{ old('lugar') }}" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500" required placeholder="Ej. Templo Principal">
+                        @error('lugar')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                     <div>
                         <label class="block text-gray-700 font-bold mb-2">Capacidad Máxima (0 = ilimitada)</label>
                         <input type="number" name="capacidad_maxima" value="{{ old('capacidad_maxima', 0) }}" min="0" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500">
+                        @error('capacidad_maxima')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
                     </div>
                 </div>
 
                 <div class="mb-6">
                     <label class="block text-gray-700 font-bold mb-2">Objetivos del Evento <span class="text-red-500">*</span></label>
                     <textarea name="objetivos" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500" rows="3" required placeholder="¿Cuál es el propósito de este evento?">{{ old('objetivos') }}</textarea>
+                    @error('objetivos')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-6">
                     <label class="block text-gray-700 font-bold mb-2">Descripción Detallada</label>
                     <textarea name="descripcion" class="w-full border-gray-300 rounded-lg shadow-sm focus:border-blue-500" rows="3">{{ old('descripcion') }}</textarea>
+                    @error('descripcion')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="flex justify-end space-x-3 pt-4 border-t border-gray-100">
