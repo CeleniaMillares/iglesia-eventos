@@ -25,8 +25,8 @@ class RegistrationTest extends TestCase
         $response = $this->post('/register', [
             'nombre' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
         ]);
 
         $this->assertAuthenticated();
@@ -52,8 +52,8 @@ class RegistrationTest extends TestCase
         $this->post('/register', [
             'nombre' => 'Test User',
             'email' => 'test@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
         ])->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertDatabaseHas('roles', ['nombre' => 'Miembro']);

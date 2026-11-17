@@ -13,7 +13,7 @@ class MiembroController extends Controller
         // Traer los usuarios que tienen el rol "Miembro" y su perfil
         $miembros = User::whereHas('roles', function($q){
             $q->where('nombre', 'Miembro');
-        })->with('miembro')->paginate(10);
+        })->with('miembro')->paginate(15);
 
         return view('miembros.index', compact('miembros'));
     }

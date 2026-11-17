@@ -18,10 +18,13 @@ class EventoController extends Controller
         
         // Si es Comité, solo ve sus propios eventos creados
         if ($user->tieneAlgunRol(['Comité de Eventos'])) {
-            $eventos = Evento::where('user_creador_id', $user->id)->orderBy('fecha_inicio', 'desc')->paginate(10);
+            $eventos = Evento::with('creador')
+                ->where('user_creador_id', $user->id)
+                ->orderBy('fecha_inicio', 'desc')
+                ->paginate(15);
         } else {
             // Pastor, Secretaría y Admin ven todos
-            $eventos = Evento::with('creador')->orderBy('fecha_inicio', 'desc')->paginate(10);
+            $eventos = Evento::with('creador')->orderBy('fecha_inicio', 'desc')->paginate(15);
         }
 
         return view('eventos.index', compact('eventos'));

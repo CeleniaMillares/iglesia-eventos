@@ -50,7 +50,7 @@ class ConvocatoriaController extends Controller
     {
         $convocatorias = \App\Models\Convocatoria::with(['evento', 'user'])
             ->orderBy('fecha_envio', 'desc')
-            ->paginate(10);
+            ->paginate(15);
             
         return view('convocatorias.index', compact('convocatorias'));
     }
