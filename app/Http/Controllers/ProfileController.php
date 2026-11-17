@@ -26,13 +26,47 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $validated = $request->validated();
+        $foto = $request->file('foto')?->store('fotos', 'public');
+        $userData = array_intersect_key($validated, array_flip([
+            'nombre',
+            'email',
+            'telefono',
+            'celular',
+            'direccion',
+        ]));
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        if ($foto) {
+            $userData['foto'] = $foto;
         }
 
-        $request->user()->save();
+        $user->fill($userData);
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
+        }
+
+        $user->save();
+
+        if ($miembro = $user->miembro) {
+            $miembroData = array_intersect_key($validated, array_flip([
+                'tipo_sangre',
+                'numero_referencia',
+                'contacto_emergencia',
+                'telefono_emergencia',
+                'estado_civil',
+                'conyuge',
+                'hijos',
+                'profesion',
+            ]));
+
+            if ($foto) {
+                $miembroData['foto'] = $foto;
+            }
+
+            $miembro->update($miembroData);
+        }
 
         return Redirect::route('profile.edit')->with('status', 'profile-updated');
     }

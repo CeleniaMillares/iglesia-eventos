@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Evento;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class EventoController extends Controller
@@ -32,14 +34,19 @@ class EventoController extends Controller
 
     public function create()
     {
-        return view('eventos.create');
+        return view('eventos.create', [
+            'responsables' => $this->responsables(),
+        ]);
     }
 
     public function edit(Evento $evento): View
     {
         Gate::authorize('update', $evento);
 
-        return view('eventos.edit', compact('evento'));
+        return view('eventos.edit', [
+            'evento' => $evento,
+            'responsables' => $this->responsables(),
+        ]);
     }
 
     public function update(Request $request, Evento $evento): RedirectResponse
@@ -55,6 +62,10 @@ class EventoController extends Controller
             'lugar' => ['required', 'string', 'max:100'],
             'objetivos' => ['required', 'string', 'max:1000'],
             'capacidad_maxima' => ['nullable', 'integer', 'min:0'],
+            'tipo_evento' => ['nullable', 'string', 'max:100'],
+            'duracion_dias' => ['nullable', 'integer', 'min:1'],
+            'responsable_principal_id' => ['nullable', 'integer', Rule::in($this->responsables()->modelKeys())],
+            'cronograma' => ['nullable', 'string'],
         ]);
 
         $evento->update($validatedData);
@@ -73,6 +84,10 @@ class EventoController extends Controller
             'lugar' => ['required', 'string', 'max:100'],
             'objetivos' => ['required', 'string', 'max:1000'], // RN-02: Obligatorio
             'capacidad_maxima' => ['nullable', 'integer', 'min:0'],
+            'tipo_evento' => ['nullable', 'string', 'max:100'],
+            'duracion_dias' => ['nullable', 'integer', 'min:1'],
+            'responsable_principal_id' => ['nullable', 'integer', Rule::in($this->responsables()->modelKeys())],
+            'cronograma' => ['nullable', 'string'],
         ]);
 
         try {
@@ -148,6 +163,16 @@ class EventoController extends Controller
         
         $evento->update(['estado' => 'finalizado']);
         return back()->with('success', 'Evento finalizado. El acta en PDF ya está disponible.');
+    }
+
+    private function responsables()
+    {
+        return User::query()
+            ->whereHas('roles', function ($query): void {
+                $query->whereIn('nombre', ['Pastor Principal', 'Comité de Eventos', 'Secretaría']);
+            })
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
     }
 
 }

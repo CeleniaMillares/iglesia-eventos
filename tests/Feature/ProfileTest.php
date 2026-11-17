@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Miembro;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ProfileTest extends TestCase
@@ -41,6 +44,48 @@ class ProfileTest extends TestCase
         $this->assertSame('Test User', $user->nombre);
         $this->assertSame('test@example.com', $user->email);
         $this->assertNull($user->email_verified_at);
+    }
+
+    public function test_profile_and_member_details_and_photo_can_be_updated(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $miembro = Miembro::factory()->create(['user_id' => $user->id]);
+        $photo = UploadedFile::fake()->image('perfil.png');
+
+        $this->actingAs($user)
+            ->patch('/profile', [
+                'nombre' => $user->nombre,
+                'email' => $user->email,
+                'telefono' => '22223333',
+                'celular' => '77778888',
+                'direccion' => 'Calle de prueba',
+                'foto' => $photo,
+                'tipo_sangre' => 'O+',
+                'numero_referencia' => 'REF-001',
+                'contacto_emergencia' => 'Contacto de emergencia',
+                'telefono_emergencia' => '33334444',
+                'estado_civil' => 'casado',
+                'conyuge' => 'Cónyuge de prueba',
+                'hijos' => 2,
+                'profesion' => 'Docente',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/profile');
+
+        $user->refresh();
+        $miembro->refresh();
+
+        $this->assertSame('22223333', $user->telefono);
+        $this->assertSame('77778888', $user->celular);
+        $this->assertSame('Calle de prueba', $user->direccion);
+        $this->assertNotNull($user->foto);
+        $this->assertSame($user->foto, $miembro->foto);
+        $this->assertSame('O+', $miembro->tipo_sangre);
+        $this->assertSame('REF-001', $miembro->numero_referencia);
+        $this->assertSame(2, $miembro->hijos);
+        Storage::disk('public')->assertExists($user->foto);
     }
 
     public function test_email_verification_status_is_unchanged_when_the_email_address_is_unchanged(): void

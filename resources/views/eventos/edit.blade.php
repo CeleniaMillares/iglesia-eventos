@@ -54,6 +54,40 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
+                        <label for="tipo_evento" class="block text-gray-700 font-bold mb-2">Tipo de Evento</label>
+                        <select id="tipo_evento" name="tipo_evento" class="w-full border-gray-300 rounded-lg shadow-sm">
+                            <option value="">Selecciona un tipo</option>
+                            @foreach (['Culto', 'Retiro', 'Vigilia', 'Conferencia', 'Otro'] as $tipo)
+                                <option value="{{ $tipo }}" @selected(old('tipo_evento', $evento->tipo_evento) === $tipo)>{{ $tipo }}</option>
+                            @endforeach
+                        </select>
+                        @error('tipo_evento')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label for="duracion_dias" class="block text-gray-700 font-bold mb-2">Duración en días</label>
+                        <input id="duracion_dias" type="number" name="duracion_dias" value="{{ old('duracion_dias', $evento->duracion_dias) }}" min="1" class="w-full border-gray-300 rounded-lg shadow-sm">
+                        @error('duracion_dias')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                    <div>
+                        <label for="responsable_principal_id" class="block text-gray-700 font-bold mb-2">Responsable principal</label>
+                        <select id="responsable_principal_id" name="responsable_principal_id" class="w-full border-gray-300 rounded-lg shadow-sm">
+                            <option value="">Sin asignar</option>
+                            @foreach ($responsables as $responsable)
+                                <option value="{{ $responsable->id }}" @selected((string) old('responsable_principal_id', $evento->responsable_principal_id) === (string) $responsable->id)>{{ $responsable->nombre }}</option>
+                            @endforeach
+                        </select>
+                        @error('responsable_principal_id')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
                         <label for="lugar" class="block text-gray-700 font-bold mb-2">Lugar</label>
                         <input id="lugar" type="text" name="lugar" value="{{ old('lugar', $evento->lugar) }}" maxlength="100" required class="w-full border-gray-300 rounded-lg shadow-sm">
                         @error('lugar')
@@ -67,6 +101,14 @@
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
+                </div>
+
+                <div class="mb-6">
+                    <label for="cronograma" class="block text-gray-700 font-bold mb-2">Cronograma</label>
+                    <textarea id="cronograma" name="cronograma" rows="4" class="w-full border-gray-300 rounded-lg shadow-sm">{{ old('cronograma', $evento->cronograma) }}</textarea>
+                    @error('cronograma')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="mb-6">
