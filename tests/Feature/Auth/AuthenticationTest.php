@@ -42,6 +42,21 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_is_throttled_after_five_requests_per_minute(): void
+    {
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this->post('/login', [
+                'email' => "unknown{$attempt}@example.test",
+                'password' => 'wrong-password',
+            ])->assertRedirect();
+        }
+
+        $this->post('/login', [
+            'email' => 'sixth@example.test',
+            'password' => 'wrong-password',
+        ])->assertTooManyRequests();
+    }
+
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();

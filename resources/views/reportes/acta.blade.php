@@ -33,7 +33,7 @@
             <thead>
                 <tr>
                     <th>Nombre del Miembro</th>
-                    <th>Email</th>
+                    <th>Correo electrónico</th>
                     <th>Fecha de Confirmación</th>
                 </tr>
             </thead>

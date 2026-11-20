@@ -9,9 +9,27 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\View\View;
 
 class ConfirmacionAsistenciaController extends Controller
 {
+    public function index(Request $request): View
+    {
+        abort_unless($request->user()->tieneRol('Miembro'), 403);
+
+        $miembro = $request->user()->miembro;
+
+        abort_unless($miembro, 403);
+
+        $confirmaciones = ConfirmacionAsistencia::with('evento')
+            ->where('miembro_id', $miembro->id)
+            ->where('estado', 'confirmada')
+            ->orderByDesc('fecha_confirmacion')
+            ->get();
+
+        return view('confirmaciones.index', compact('confirmaciones'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         abort_unless($request->user()->tieneRol('Miembro'), 403);
@@ -22,7 +40,7 @@ class ConfirmacionAsistenciaController extends Controller
 
         $miembro = $request->user()->miembro;
 
-        if (!$miembro) {
+        if (! $miembro) {
             return back()->with('error', 'No se encontró un perfil de miembro asociado a tu usuario.');
         }
 
@@ -34,18 +52,27 @@ class ConfirmacionAsistenciaController extends Controller
 
                 Gate::authorize('confirmar', $evento);
 
-                if ($evento->confirmaciones()->where('miembro_id', $miembro->id)->exists()) {
+                $confirmacion = $evento->confirmaciones()
+                    ->where('miembro_id', $miembro->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($confirmacion?->estado === 'confirmada') {
                     return back()->with('error', 'Ya has confirmado tu asistencia a este evento.');
                 }
 
-                if (!$evento->tieneCupo()) {
+                if (! $evento->tieneCupo()) {
                     return back()->with('error', 'El evento ha alcanzado su capacidad máxima.');
                 }
 
-                ConfirmacionAsistencia::create([
-                    'evento_id' => $evento->id,
-                    'miembro_id' => $miembro->id,
-                ]);
+                if ($confirmacion) {
+                    $confirmacion->update(['estado' => 'confirmada']);
+                } else {
+                    ConfirmacionAsistencia::create([
+                        'evento_id' => $evento->id,
+                        'miembro_id' => $miembro->id,
+                    ]);
+                }
 
                 return back()->with('success', 'Asistencia confirmada exitosamente.');
             });
@@ -56,5 +83,38 @@ class ConfirmacionAsistenciaController extends Controller
 
             throw $exception;
         }
+    }
+
+    public function destroy(Request $request, Evento $evento): RedirectResponse
+    {
+        abort_unless($request->user()->tieneRol('Miembro'), 403);
+
+        $miembro = $request->user()->miembro;
+
+        if (! $miembro) {
+            return back()->with('error', 'No se encontró un perfil de miembro asociado a tu usuario.');
+        }
+
+        return DB::transaction(function () use ($evento, $miembro): RedirectResponse {
+            $evento = Evento::query()
+                ->lockForUpdate()
+                ->findOrFail($evento->id);
+
+            Gate::authorize('confirmar', $evento);
+
+            $confirmacion = $evento->confirmaciones()
+                ->where('miembro_id', $miembro->id)
+                ->where('estado', 'confirmada')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $confirmacion) {
+                return back()->with('error', 'No tienes una asistencia confirmada para cancelar.');
+            }
+
+            $confirmacion->update(['estado' => 'cancelada']);
+
+            return back()->with('success', 'Asistencia cancelada correctamente');
+        });
     }
 }

@@ -11,6 +11,10 @@ class Evento extends Model
 
     public const ESTADOS_CONFIRMABLES = ['aprobado', 'planificado'];
 
+    public const ESTADOS_ARCHIVABLES = ['finalizado', 'aprobado'];
+
+    public const ESTADO_ARCHIVADO = 'archivado';
+
     protected $fillable = [
         'nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'hora', 
         'lugar', 'objetivos', 'estado', 'motivo_rechazo', 
@@ -42,6 +46,11 @@ class Evento extends Model
         return $this->hasMany(ConfirmacionAsistencia::class);
     }
 
+    public function convocatorias()
+    {
+        return $this->hasMany(Convocatoria::class);
+    }
+
     public function actas()
     {
         return $this->hasMany(ActaEvento::class);
@@ -51,5 +60,19 @@ class Evento extends Model
     {
         if ($this->capacidad_maxima === 0) return true;
         return $this->confirmaciones()->where('estado', 'confirmada')->count() < $this->capacidad_maxima;
+    }
+
+    public function estaConfirmadoPor(User $user): bool
+    {
+        $miembro = $user->miembro;
+
+        if (!$miembro) {
+            return false;
+        }
+
+        return $this->confirmaciones()
+            ->where('miembro_id', $miembro->id)
+            ->where('estado', 'confirmada')
+            ->exists();
     }
 }

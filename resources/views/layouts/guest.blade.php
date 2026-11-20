@@ -1,30 +1,41 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{{ config('app.name', 'Iglesia Asamblea de Dios Boliviana') }}</title>
+    @include('layouts.partials.head-assets')
+</head>
+<body class="auth-shell">
+    <main class="container-fluid p-0">
+        <div class="row g-0 min-vh-100">
+            <aside class="col-lg-6 d-none d-lg-flex auth-brand-panel">
+                <div class="auth-brand-inner d-flex flex-column position-relative w-100">
+                    <x-church-brand light />
+                    <div class="auth-brand-content">
+                        <span class="badge rounded-pill text-bg-warning mb-3">Portal institucional</span>
+                        <h1 class="display-5 fw-bold lh-sm">Organizados para servir. Unidos para crecer.</h1>
+                        <p class="fs-5 text-white-50 mt-4 mb-0">
+                            Coordina eventos, fortalece la comunicación y acompaña la vida de nuestra comunidad desde un solo lugar.
+                        </p>
+                    </div>
+                    <p class="small text-white-50 mb-0">Iglesia Asamblea de Dios Boliviana</p>
+                </div>
+            </aside>
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
-
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
-
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans text-gray-900 antialiased">
-        <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-gray-100">
-            <div>
-                <a href="/">
-                    <x-application-logo class="w-20 h-20 fill-current text-gray-500" />
-                </a>
-            </div>
-
-            <div class="w-full sm:max-w-md mt-6 px-6 py-4 bg-white shadow-md overflow-hidden sm:rounded-lg">
-                {{ $slot }}
-            </div>
+            <section class="col-12 col-lg-6 auth-side">
+                <div class="auth-form-container w-100 mx-auto">
+                    <div class="d-lg-none text-center mb-4">
+                        <x-church-brand />
+                    </div>
+                    <div class="auth-card mx-auto p-4 p-sm-5">
+                        {{ $slot }}
+                    </div>
+                    <p class="text-center small text-secondary mt-4 mb-0">Acceso seguro para miembros y equipos autorizados.</p>
+                </div>
+            </section>
         </div>
-    </body>
+    </main>
+</body>
 </html>

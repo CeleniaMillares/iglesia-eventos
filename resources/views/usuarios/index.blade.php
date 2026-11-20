@@ -1,39 +1,82 @@
 <x-app-layout>
-    <div class="bg-white rounded-xl shadow-sm p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-bold text-gray-800">Usuarios del Sistema</h3>
+    <div class="surface-card p-3 p-md-4">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
+            <div>
+                <h2 class="h4 fw-bold mb-1">Usuarios del sistema</h2>
+                <p class="text-secondary mb-0">Administra cuentas, roles y estados de acceso.</p>
+            </div>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-600 text-sm">
-                        <th class="p-3 border-b">Nombre</th>
-                        <th class="p-3 border-b">Email</th>
-                        <th class="p-3 border-b">Rol</th>
-                        <th class="p-3 border-b">Estado</th>
+        @if(session('success'))
+            <div role="status" class="alert alert-success"><i class="bi bi-check-circle me-2" aria-hidden="true"></i>{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div role="alert" class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ session('error') }}</div>
+        @endif
+
+        <div class="data-table table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Correo electrónico</th>
+                        <th scope="col">Rol</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($usuarios as $user)
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3 font-medium">{{ $user->nombre }}</td>
-                            <td class="p-3">{{ $user->email }}</td>
-                            <td class="p-3">
-                                @foreach($user->roles as $rol)
-                                    <span class="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-bold">{{ $rol->nombre }}</span>
-                                @endforeach
+                    @forelse($usuarios as $user)
+                        @php($protegido = $user->is(auth()->user()) || $user->email === 'admin@iglesia.com')
+                        <tr>
+                            <td class="fw-semibold">{{ $user->nombre }}</td>
+                            <td>{{ $user->email }}</td>
+                            <td>
+                                @forelse($user->roles as $rol)
+                                    <span class="badge bg-primary-subtle text-primary-emphasis me-1">{{ $rol->nombre }}</span>
+                                @empty
+                                    <span class="text-secondary">Sin rol</span>
+                                @endforelse
                             </td>
-                            <td class="p-3">
-                                <span class="px-2 py-1 {{ $user->estado == 'activo' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }} rounded text-xs font-bold">
+                            <td>
+                                <span class="badge {{ $user->estado === 'activo' ? 'bg-success' : 'bg-danger' }}">
                                     {{ ucfirst($user->estado) }}
                                 </span>
                             </td>
+                            <td>
+                                <div class="table-actions">
+                                    <a href="{{ route('usuarios.show', $user) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="bi bi-eye me-1" aria-hidden="true"></i>Ver Detalles
+                                    </a>
+                                    <a href="{{ route('usuarios.edit', $user) }}" class="btn btn-sm btn-outline-warning" title="Editar usuario">
+                                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar
+                                    </a>
+                                    @unless($protegido)
+                                        <form action="{{ route('usuarios.estado', $user) }}" method="POST">
+                                            @csrf
+                                            @method('PATCH')
+                                            <button type="submit" class="btn btn-sm {{ $user->estado === 'activo' ? 'btn-outline-danger' : 'btn-outline-success' }}">
+                                                <i class="bi {{ $user->estado === 'activo' ? 'bi-person-x' : 'bi-person-check' }} me-1" aria-hidden="true"></i>
+                                                {{ $user->estado === 'activo' ? 'Desactivar' : 'Activar' }}
+                                            </button>
+                                        </form>
+                                        <form action="{{ route('usuarios.destroy', $user) }}" method="POST" onsubmit="return confirm('¿Eliminar este usuario?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash me-1" aria-hidden="true"></i>Eliminar
+                                            </button>
+                                        </form>
+                                    @endunless
+                                </div>
+                            </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="5" class="text-center text-secondary py-4">No hay usuarios registrados.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="mt-4">{{ $usuarios->links() }}</div>
+        <div class="mt-3">{{ $usuarios->links('pagination::bootstrap-5') }}</div>
     </div>
 </x-app-layout>

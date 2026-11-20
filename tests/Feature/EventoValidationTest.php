@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Evento;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,8 +31,8 @@ class EventoValidationTest extends TestCase
 
         $this->get(route('eventos.create'))
             ->assertOk()
-            ->assertSee('The nombre field is required.')
-            ->assertSee('after or equal to today');
+            ->assertSee('El campo nombre es obligatorio.')
+            ->assertSee('posterior o igual a hoy');
     }
 
     public function test_event_planning_fields_are_saved_and_responsible_is_limited_to_internal_roles(): void
@@ -77,7 +78,7 @@ class EventoValidationTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('eventos.index'));
 
-        $evento = \App\Models\Evento::where('nombre', 'Retiro de prueba')->firstOrFail();
+        $evento = Evento::where('nombre', 'Retiro de prueba')->firstOrFail();
 
         $this->assertSame('Retiro', $evento->tipo_evento);
         $this->assertSame(2, $evento->duracion_dias);

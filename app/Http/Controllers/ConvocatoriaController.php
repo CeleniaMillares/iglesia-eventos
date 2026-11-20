@@ -12,19 +12,17 @@ class ConvocatoriaController extends Controller
 {
     public function create(Evento $evento)
     {
-        // Validación estricta según RN-03 y tu documento original
-        if ($evento->estado !== 'aprobado') {
+        if (!in_array($evento->estado, Evento::ESTADOS_CONFIRMABLES, true)) {
             return redirect()->route('eventos.index')
-                ->with('error', 'No se puede enviar convocatoria. El evento está en estado: ' . $evento->estado . '. Solo se permite en estado Aprobado.');
+                ->with('error', 'No se puede enviar convocatoria. El evento debe estar aprobado o planificado.');
         }
         return view('convocatorias.create', compact('evento'));
     }
 
     public function store(Request $request, Evento $evento, EmailService $emailService)
     {
-        // Validación de seguridad extra
-        if ($evento->estado !== 'aprobado') {
-            return redirect()->route('eventos.index')->with('error', 'El evento no está aprobado.');
+        if (!in_array($evento->estado, Evento::ESTADOS_CONFIRMABLES, true)) {
+            return redirect()->route('eventos.index')->with('error', 'El evento debe estar aprobado o planificado.');
         }
 
         $request->validate([

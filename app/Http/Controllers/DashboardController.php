@@ -2,61 +2,136 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\ConfirmacionAsistencia;
+use App\Models\Convocatoria;
 use App\Models\Evento;
+use App\Models\Miembro;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         $user = Auth::user();
+        $metricas = [];
+        $rolDashboard = 'Usuario';
 
-        // Redirigir según el rol
-        if ($user->tieneAlgunRol(['Administrador'])) {
-            return $this->admin();
-        } elseif ($user->tieneAlgunRol(['Pastor Principal'])) {
-            return $this->pastor();
-        } elseif ($user->tieneAlgunRol(['Secretaría'])) {
-            return $this->secretaria();
-        } elseif ($user->tieneAlgunRol(['Comité de Eventos'])) {
-            return $this->comite();
+        if ($user->tieneRol('Administrador')) {
+            $rolDashboard = 'Administrador';
+            $metricas = [
+                ['label' => 'Total usuarios', 'value' => User::count()],
+                ['label' => 'Miembros activos', 'value' => Miembro::where('estado_miembro', 'activo')->count()],
+                ['label' => 'Total eventos', 'value' => Evento::count()],
+                ['label' => 'Eventos pendientes', 'value' => Evento::where('estado', 'pendiente')->count()],
+            ];
+            $accesosRapidos = [
+                ['label' => 'Configuración general', 'url' => route('configuraciones.index')],
+                ['label' => 'Descargar último backup', 'url' => route('backups.ultimo')],
+                ['label' => 'Gestionar usuarios', 'url' => route('usuarios.index')],
+                ['label' => 'Configuración del perfil', 'url' => route('profile.edit')],
+            ];
+
+            if (Route::has('roles.index')) {
+                $accesosRapidos[] = ['label' => 'Gestionar roles', 'url' => route('roles.index')];
+            }
+        } elseif ($user->tieneRol('Pastor Principal')) {
+            $rolDashboard = 'Pastor Principal';
+            $metricas = [
+                ['label' => 'Eventos pendientes', 'value' => Evento::where('estado', 'pendiente')->count()],
+                ['label' => 'Eventos aprobados y planificados', 'value' => Evento::whereIn('estado', Evento::ESTADOS_CONFIRMABLES)->count()],
+                ['label' => 'Miembros activos', 'value' => Miembro::where('estado_miembro', 'activo')->count()],
+                ['label' => 'Próximos eventos', 'value' => Evento::where('fecha_inicio', '>=', today()->toDateString())->count()],
+            ];
+            $accesosRapidos = [
+                ['label' => 'Bandeja de eventos pendientes', 'url' => route('eventos.index', ['estado' => 'pendiente'])],
+                ['label' => 'Reportes', 'url' => route('reportes.index')],
+            ];
+        } elseif ($user->tieneRol('Secretaría')) {
+            $rolDashboard = 'Secretaría';
+            $metricas = [
+                [
+                    'label' => 'Total miembros',
+                    'value' => User::whereHas('roles', fn ($query) => $query->where('nombre', 'Miembro'))->count(),
+                ],
+                ['label' => 'Pendientes de verificación', 'value' => Miembro::where('estado_miembro', 'pendiente')->count()],
+                ['label' => 'Convocatorias enviadas', 'value' => Convocatoria::count()],
+                [
+                    'label' => 'Eventos para convocar',
+                    'value' => Evento::whereIn('estado', Evento::ESTADOS_CONFIRMABLES)
+                        ->whereDoesntHave('convocatorias')
+                        ->count(),
+                ],
+            ];
+            $accesosRapidos = [
+                ['label' => 'Nuevo miembro', 'url' => route('miembros.create')],
+                ['label' => 'Verificar miembros', 'url' => route('miembros.index')],
+                ['label' => 'Enviar convocatorias', 'url' => route('eventos.index', ['para_convocar' => 1])],
+                ['label' => 'Historial de convocatorias', 'url' => route('convocatorias.index')],
+            ];
+        } elseif ($user->tieneRol('Miembro')) {
+            $rolDashboard = 'Miembro';
+            $miembroId = $user->miembro?->id;
+            $confirmaciones = ConfirmacionAsistencia::query()
+                ->where('miembro_id', $miembroId)
+                ->where('estado', 'confirmada');
+            $eventosEsteMes = $miembroId
+                ? Evento::whereIn('estado', Evento::ESTADOS_CONFIRMABLES)
+                    ->whereBetween('fecha_inicio', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
+                    ->count()
+                : 0;
+
+            $metricas = [
+                [
+                    'label' => 'Eventos disponibles',
+                    'value' => $miembroId
+                        ? Evento::whereIn('estado', Evento::ESTADOS_CONFIRMABLES)
+                            ->whereDoesntHave('confirmaciones', function ($query) use ($miembroId): void {
+                                $query->where('miembro_id', $miembroId)->where('estado', 'confirmada');
+                            })
+                            ->count()
+                        : 0,
+                ],
+                ['label' => 'Mis confirmaciones', 'value' => (clone $confirmaciones)->count()],
+                ['label' => 'Eventos este mes', 'value' => $eventosEsteMes],
+                [
+                    'label' => 'Asistencia pasada',
+                    'value' => (clone $confirmaciones)
+                        ->whereHas('evento', fn ($query) => $query->where('fecha_inicio', '<', today()->toDateString()))
+                        ->count(),
+                ],
+            ];
+            $accesosRapidos = [
+                ['label' => 'Ver eventos disponibles', 'url' => route('eventos.index')],
+                ['label' => 'Mis confirmaciones', 'url' => route('eventos.index').'#confirmed-events-title'],
+            ];
+        } elseif ($user->tieneRol('Comité de Eventos')) {
+            $rolDashboard = 'Comité de Eventos';
+            $misEventos = Evento::where('user_creador_id', $user->id);
+            $metricas = [
+                ['label' => 'Mis eventos', 'value' => (clone $misEventos)->count()],
+                ['label' => 'Mis propuestas pendientes', 'value' => (clone $misEventos)->where('estado', 'pendiente')->count()],
+                ['label' => 'Mis eventos aprobados', 'value' => (clone $misEventos)->whereIn('estado', Evento::ESTADOS_CONFIRMABLES)->count()],
+            ];
+            $accesosRapidos = [
+                ['label' => 'Crear evento', 'url' => route('eventos.create')],
+                ['label' => 'Ver mis eventos', 'url' => route('eventos.index')],
+            ];
+        } else {
+            $accesosRapidos = [
+                ['label' => 'Ver eventos', 'url' => route('eventos.index')],
+            ];
         }
 
-        // Si es un miembro normal
-        return view('dashboard'); 
-    }
+        $proximoEvento = Evento::query()
+            ->whereIn('estado', Evento::ESTADOS_CONFIRMABLES)
+            ->where('fecha_inicio', '>=', today()->toDateString())
+            ->orderBy('fecha_inicio')
+            ->orderBy('hora')
+            ->first(['id', 'nombre', 'fecha_inicio', 'hora', 'lugar']);
 
-    private function admin()
-    {
-        $totalUsuarios = User::count();
-        $totalEventos = Evento::count();
-        $eventosPendientes = Evento::where('estado', 'pendiente')->count();
-        
-        return view('dashboards.admin', compact('totalUsuarios', 'totalEventos', 'eventosPendientes'));
-    }
-
-    private function pastor()
-    {
-        $eventosPendientes = Evento::where('estado', 'pendiente')->get();
-        $totalAprobados = Evento::where('estado', 'aprobado')->count();
-        
-        return view('dashboards.pastor', compact('eventosPendientes', 'totalAprobados'));
-    }
-
-    private function secretaria()
-    {
-        $totalMiembros = User::has('roles')->whereHas('roles', function($q){
-            $q->where('nombre', 'Miembro');
-        })->count();
-        
-        return view('dashboards.secretaria', compact('totalMiembros'));
-    }
-
-    private function comite()
-    {
-        $misEventos = Evento::where('user_creador_id', Auth::id())->orderBy('fecha_inicio', 'desc')->take(5)->get();
-        return view('dashboards.comite', compact('misEventos'));
+        return view('dashboard', compact('metricas', 'rolDashboard', 'accesosRapidos', 'proximoEvento'));
     }
 }

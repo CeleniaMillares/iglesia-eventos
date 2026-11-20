@@ -10,6 +10,10 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
+    protected $attributes = [
+        'estado' => 'activo',
+    ];
+
     protected $fillable = [
         'nombre',
         'email',
@@ -58,5 +62,15 @@ class User extends Authenticatable
     public function tieneAlgunRol(array $roles): bool
     {
         return $this->roles()->whereIn('nombre', $roles)->exists();
+    }
+
+    public function hasRole(string $nombreRol): bool
+    {
+        return $this->tieneRol($nombreRol);
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return $this->tieneAlgunRol($roles);
     }
 }

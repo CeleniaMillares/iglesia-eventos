@@ -16,7 +16,7 @@ return new class extends Migration
             $table->date('fecha_fin')->nullable();
             $table->time('hora')->nullable();
             $table->string('lugar', 100);
-            $table->text('objetivos')->nullable();
+            $table->text('objetivos');
             $table->enum('estado', ['pendiente', 'aprobado', 'rechazado', 'planificado', 'finalizado'])->default('pendiente');
             $table->text('motivo_rechazo')->nullable();
             $table->integer('capacidad_maxima')->default(0);

@@ -58,6 +58,180 @@ class ConfirmacionAsistenciaTest extends TestCase
         $this->assertDatabaseCount('confirmaciones_asistencia', 1);
     }
 
+    public function test_miembro_puede_cancelar_asistencia(): void
+    {
+        [$user, $miembro, $evento] = $this->createMemberAndEvent();
+        $evento->update(['capacidad_maxima' => 1]);
+
+        $this->actingAs($user)
+            ->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
+            ->assertSessionHas('success', 'Asistencia confirmada exitosamente.');
+
+        $this->assertFalse($evento->fresh()->tieneCupo());
+
+        $this->delete(route('confirmaciones.destroy', $evento))
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Asistencia cancelada correctamente');
+
+        $this->assertDatabaseHas('confirmaciones_asistencia', [
+            'evento_id' => $evento->id,
+            'miembro_id' => $miembro->id,
+            'estado' => 'cancelada',
+        ]);
+        $this->assertTrue($evento->fresh()->tieneCupo());
+    }
+
+    public function test_cancelled_member_can_confirm_attendance_again(): void
+    {
+        [$user, $miembro, $evento] = $this->createMemberAndEvent();
+
+        $this->actingAs($user)
+            ->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
+            ->assertSessionHas('success', 'Asistencia confirmada exitosamente.');
+
+        $this->delete(route('confirmaciones.destroy', $evento))
+            ->assertSessionHas('success', 'Asistencia cancelada correctamente');
+
+        $this->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
+            ->assertSessionHas('success', 'Asistencia confirmada exitosamente.');
+
+        $this->assertDatabaseHas('confirmaciones_asistencia', [
+            'evento_id' => $evento->id,
+            'miembro_id' => $miembro->id,
+            'estado' => 'confirmada',
+        ]);
+        $this->assertDatabaseCount('confirmaciones_asistencia', 1);
+    }
+
+    public function test_cancel_button_is_shown_in_mis_confirmaciones(): void
+    {
+        [$user, , $evento] = $this->createMemberAndEvent();
+
+        $this->actingAs($user)
+            ->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
+            ->assertSessionHas('success');
+
+        $this->get(route('confirmaciones.index'))
+            ->assertOk()
+            ->assertSee(route('confirmaciones.destroy', $evento))
+            ->assertSee('Cancelar Asistencia')
+            ->assertDontSee('Confirmar Asistencia');
+
+        $this->get(route('eventos.index'))
+            ->assertOk()
+            ->assertDontSee($evento->nombre)
+            ->assertDontSee(route('confirmaciones.destroy', $evento));
+    }
+
+    public function test_member_sees_available_events_and_confirmations_in_separate_views(): void
+    {
+        [$user, , $confirmedEvent] = $this->createMemberAndEvent();
+        $availableEvent = $this->createEvent($user);
+        $availableEvent->update(['estado' => 'planificado']);
+        $pendingEvent = $this->createEvent($user);
+        $pendingEvent->update(['estado' => 'pendiente']);
+        $rejectedEvent = $this->createEvent($user);
+        $rejectedEvent->update(['estado' => 'rechazado']);
+
+        $this->actingAs($user)
+            ->post(route('confirmaciones.store'), ['evento_id' => $confirmedEvent->id])
+            ->assertSessionHas('success');
+
+        $this->get(route('eventos.index'))
+            ->assertOk()
+            ->assertSee('Eventos Disponibles')
+            ->assertSee($availableEvent->nombre)
+            ->assertDontSee($confirmedEvent->nombre)
+            ->assertDontSee($pendingEvent->nombre)
+            ->assertDontSee($rejectedEvent->nombre)
+            ->assertDontSee('Aprobado')
+            ->assertDontSee('Pendiente')
+            ->assertDontSee('Rechazado');
+
+        $this->get(route('confirmaciones.index'))
+            ->assertOk()
+            ->assertSee('Mis Confirmaciones')
+            ->assertSee($confirmedEvent->nombre)
+            ->assertDontSee($availableEvent->nombre)
+            ->assertDontSee($pendingEvent->nombre)
+            ->assertDontSee($rejectedEvent->nombre)
+            ->assertDontSee('Confirmar Asistencia');
+    }
+
+    public function test_miembro_no_ve_la_confirmacion_de_otro_miembro(): void
+    {
+        [$userA, $miembroA, $eventoA] = $this->createMemberAndEvent();
+        [$userB, $miembroB] = $this->createMember();
+        $eventoB = $this->createEvent($userB);
+
+        ConfirmacionAsistencia::create([
+            'evento_id' => $eventoA->id,
+            'miembro_id' => $miembroA->id,
+        ]);
+        ConfirmacionAsistencia::create([
+            'evento_id' => $eventoB->id,
+            'miembro_id' => $miembroB->id,
+        ]);
+
+        $this->actingAs($userA)
+            ->get(route('confirmaciones.index'))
+            ->assertOk()
+            ->assertSee($eventoA->nombre)
+            ->assertDontSee($eventoB->nombre);
+
+        $this->actingAs($userB)
+            ->get(route('confirmaciones.index'))
+            ->assertOk()
+            ->assertSee($eventoB->nombre)
+            ->assertDontSee($eventoA->nombre);
+    }
+
+    public function test_evento_confirmado_desaparece_de_eventos_disponibles(): void
+    {
+        [$user, , $eventoConfirmado] = $this->createMemberAndEvent();
+        $eventoDisponible = $this->createEvent($user);
+
+        $this->actingAs($user)
+            ->get(route('eventos.index'))
+            ->assertOk()
+            ->assertSee($eventoConfirmado->nombre)
+            ->assertSee($eventoDisponible->nombre);
+
+        $this->post(route('confirmaciones.store'), ['evento_id' => $eventoConfirmado->id])
+            ->assertSessionHas('success');
+
+        $this->get(route('eventos.index'))
+            ->assertOk()
+            ->assertDontSee($eventoConfirmado->nombre)
+            ->assertSee($eventoDisponible->nombre)
+            ->assertDontSee(route('confirmaciones.destroy', $eventoConfirmado));
+
+        $this->get(route('confirmaciones.index'))
+            ->assertOk()
+            ->assertSee($eventoConfirmado->nombre)
+            ->assertSee(route('confirmaciones.destroy', $eventoConfirmado));
+    }
+
+    public function test_member_cannot_cancel_attendance_for_non_confirmable_event(): void
+    {
+        [$user, $miembro, $evento] = $this->createMemberAndEvent();
+        ConfirmacionAsistencia::create([
+            'evento_id' => $evento->id,
+            'miembro_id' => $miembro->id,
+        ]);
+        $evento->update(['estado' => 'finalizado']);
+
+        $this->actingAs($user)
+            ->delete(route('confirmaciones.destroy', $evento))
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('confirmaciones_asistencia', [
+            'evento_id' => $evento->id,
+            'miembro_id' => $miembro->id,
+            'estado' => 'confirmada',
+        ]);
+    }
+
     public function test_non_member_cannot_confirm_attendance(): void
     {
         $user = User::create([
@@ -93,7 +267,7 @@ class ConfirmacionAsistenciaTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
-            ->assertForbidden();
+            ->assertRedirect(route('auth.pending'));
 
         $this->assertDatabaseCount('confirmaciones_asistencia', 0);
     }
@@ -105,7 +279,7 @@ class ConfirmacionAsistenciaTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
-            ->assertForbidden();
+            ->assertRedirect(route('auth.pending'));
 
         $this->assertDatabaseCount('confirmaciones_asistencia', 0);
     }
@@ -150,7 +324,7 @@ class ConfirmacionAsistenciaTest extends TestCase
         $this->assertDatabaseCount('confirmaciones_asistencia', 1);
     }
 
-    public function test_user_without_member_profile_is_redirected_with_an_error(): void
+    public function test_member_without_profile_is_redirected_to_pending_notice(): void
     {
         $role = Role::create(['nombre' => 'Miembro']);
         $user = User::create([
@@ -163,8 +337,7 @@ class ConfirmacionAsistenciaTest extends TestCase
 
         $this->actingAs($user)
             ->post(route('confirmaciones.store'), ['evento_id' => $evento->id])
-            ->assertRedirect()
-            ->assertSessionHas('error', 'No se encontró un perfil de miembro asociado a tu usuario.');
+            ->assertRedirect(route('auth.pending'));
 
         $this->assertDatabaseCount('confirmaciones_asistencia', 0);
     }
@@ -186,6 +359,19 @@ class ConfirmacionAsistenciaTest extends TestCase
             ->post(route('confirmaciones.store'), $payload)
             ->assertRedirect(route('eventos.index'))
             ->assertSessionHas('error', 'Ya has confirmado tu asistencia a este evento.');
+    }
+
+    private function createMember(): array
+    {
+        $role = Role::firstOrCreate(['nombre' => 'Miembro']);
+        $user = User::factory()->create();
+        $user->roles()->attach($role);
+        $miembro = Miembro::factory()->create([
+            'user_id' => $user->id,
+            'estado_miembro' => 'activo',
+        ]);
+
+        return [$user, $miembro];
     }
 
     private function createMemberAndEvent(): array

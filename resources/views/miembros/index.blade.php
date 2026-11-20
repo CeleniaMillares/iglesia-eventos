@@ -1,52 +1,77 @@
 <x-app-layout>
-    <div class="bg-white rounded-xl shadow-sm p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h3 class="text-2xl font-bold text-gray-800">Gestión de Miembros</h3>
+    <div class="surface-card p-3 p-md-4">
+        <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mb-4">
+            <div>
+                <h2 class="h4 fw-bold mb-1">Gestión de miembros</h2>
+                <p class="text-secondary mb-0">Consulta, edita y administra el estado de los miembros.</p>
+            </div>
+            <a href="{{ route('miembros.create') }}" class="btn btn-primary">
+                <i class="bi bi-person-plus me-1" aria-hidden="true"></i>Nuevo miembro
+            </a>
         </div>
 
-        @if (session('success'))
-            <div class="bg-green-100 text-green-700 p-3 rounded mb-4">{{ session('success') }}</div>
+        @if(session('success'))
+            <div role="status" class="alert alert-success"><i class="bi bi-check-circle me-2" aria-hidden="true"></i>{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div role="alert" class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>{{ session('error') }}</div>
         @endif
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-600 text-sm">
-                        <th class="p-3 border-b">Nombre</th>
-                        <th class="p-3 border-b">Email</th>
-                        <th class="p-3 border-b">Teléfono</th>
-                        <th class="p-3 border-b">Estado</th>
-                        <th class="p-3 border-b">Acciones</th>
+        <div class="data-table table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Correo electrónico</th>
+                        <th scope="col">Teléfono</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($miembros as $miembro)
-                        <tr class="border-b hover:bg-gray-50">
-                            <td class="p-3 font-medium">{{ $miembro->nombre }}</td>
-                            <td class="p-3">{{ $miembro->email }}</td>
-                            <td class="p-3">{{ $miembro->miembro->telefono ?? 'N/A' }}</td>
-                            <td class="p-3">
-                                @if($miembro->estado == 'activo')
-                                    <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-bold">Activo</span>
-                                @else
-                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold">Pendiente</span>
-                                @endif
+                    @forelse($miembros as $miembro)
+                        @php($activo = $miembro->estado === 'activo' && $miembro->miembro?->estado_miembro === 'activo')
+                        <tr>
+                            <td class="fw-semibold">{{ $miembro->nombre }}</td>
+                            <td>{{ $miembro->email }}</td>
+                            <td>{{ $miembro->miembro->telefono ?? 'N/A' }}</td>
+                            <td>
+                                <span class="badge {{ $activo ? 'bg-success' : 'bg-warning text-dark' }}">
+                                    {{ $activo ? 'Activo' : 'Inactivo' }}
+                                </span>
                             </td>
-                            <td class="p-3">
-                                @if($miembro->estado == 'pendiente')
-                                    <form action="{{ route('miembros.verificar', $miembro) }}" method="POST">
+                            <td>
+                                <div class="table-actions">
+                                    <a href="{{ route('miembros.show', $miembro) }}" class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                        <i class="bi bi-eye me-1" aria-hidden="true"></i>Ver Detalles
+                                    </a>
+                                    <a href="{{ route('miembros.edit', $miembro) }}" class="btn btn-sm btn-outline-warning" title="Editar miembro">
+                                        <i class="bi bi-pencil me-1" aria-hidden="true"></i>Editar
+                                    </a>
+                                    <form action="{{ route('miembros.estado', $miembro) }}" method="POST">
                                         @csrf
-                                        <button class="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">Verificar</button>
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-sm {{ $activo ? 'btn-outline-danger' : 'btn-outline-success' }}">
+                                            <i class="bi {{ $activo ? 'bi-person-x' : 'bi-person-check' }} me-1" aria-hidden="true"></i>
+                                            {{ $activo ? 'Desactivar' : 'Activar' }}
+                                        </button>
                                     </form>
-                                @else
-                                    <span class="text-gray-400 text-xs">Sin acciones</span>
-                                @endif
+                                    <form action="{{ route('miembros.destroy', $miembro) }}" method="POST" onsubmit="return confirm('¿Eliminar este miembro y su usuario?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash me-1" aria-hidden="true"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
-                    @endforeach
+                    @empty
+                        <tr><td colspan="5" class="text-center text-secondary py-4">No hay miembros para mostrar.</td></tr>
+                    @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="mt-4">{{ $miembros->links() }}</div>
+        <div class="mt-3">{{ $miembros->links('pagination::bootstrap-5') }}</div>
     </div>
 </x-app-layout>

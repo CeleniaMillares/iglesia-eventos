@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Configuracion;
 use App\Models\Evento;
 use App\Models\User;
+use App\Services\EmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,22 +16,68 @@ use Illuminate\View\View;
 
 class EventoController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
-        
-        // Si es Comité, solo ve sus propios eventos creados
-        if ($user->tieneAlgunRol(['Comité de Eventos'])) {
-            $eventos = Evento::with('creador')
-                ->where('user_creador_id', $user->id)
+        $porPagina = Configuracion::limiteEventosPorPagina();
+
+        if ($user->tieneRol('Miembro')) {
+            $miembroId = $user->miembro->id;
+
+            $disponibles = Evento::query()
+                ->whereIn('estado', Evento::ESTADOS_CONFIRMABLES)
+                ->whereDoesntHave('confirmaciones', function ($query) use ($miembroId): void {
+                    $query->where('miembro_id', $miembroId)
+                        ->where('estado', 'confirmada');
+                })
                 ->orderBy('fecha_inicio', 'desc')
-                ->paginate(15);
-        } else {
-            // Pastor, Secretaría y Admin ven todos
-            $eventos = Evento::with('creador')->orderBy('fecha_inicio', 'desc')->paginate(15);
+                ->paginate($porPagina, ['*'], 'disponibles_page');
+
+            return view('eventos.index', compact('disponibles'));
         }
 
+        $eventos = Evento::query()->with('creador');
+
+        if ($user->tieneRol('Secretaría')) {
+            $eventos->with('actas.generadoPor');
+        }
+
+        if ($user->tieneRol('Pastor Principal')) {
+            if ($request->query('estado') === 'aprobado') {
+                $eventos->whereIn('estado', ['aprobado', 'planificado']);
+            } else {
+                $eventos->where('estado', 'pendiente');
+            }
+        } elseif ($user->tieneRol('Secretaría')) {
+            $eventos->whereIn('estado', ['aprobado', 'planificado', 'finalizado']);
+
+            if ($request->query('estado') === 'programados') {
+                $eventos->whereIn('estado', Evento::ESTADOS_CONFIRMABLES);
+            }
+
+            if ($request->boolean('para_convocar')) {
+                $eventos->whereDoesntHave('convocatorias');
+            }
+        } elseif ($user->tieneRol('Comité de Eventos')) {
+            $eventos->where('user_creador_id', $user->id);
+
+            if ($request->query('estado') === 'pendiente') {
+                $eventos->where('estado', 'pendiente');
+            }
+        } elseif ($request->query('estado') === 'pendiente') {
+            $eventos->where('estado', 'pendiente');
+        }
+
+        $eventos = $eventos->orderBy('fecha_inicio', 'desc')->paginate($porPagina)->withQueryString();
+
         return view('eventos.index', compact('eventos'));
+    }
+
+    public function show(Evento $evento): View
+    {
+        $evento->load(['creador', 'responsablePrincipal', 'actas.generadoPor']);
+
+        return view('eventos.show', compact('evento'));
     }
 
     public function create()
@@ -105,28 +153,39 @@ class EventoController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Error al crear el evento: ' . $e->getMessage())->withInput();
+
+            return back()->with('error', 'Error al crear el evento: '.$e->getMessage())->withInput();
         }
     }
 
     public function aprobar(Evento $evento)
     {
-        if (!Auth::user()->tieneAlgunRol(['Pastor Principal'])) {
-             abort(403, 'No autorizado.');
+        if (! Auth::user()->tieneAlgunRol(['Pastor Principal'])) {
+            abort(403, 'No autorizado.');
+        }
+
+        if ($evento->estado !== 'pendiente') {
+            abort(409, 'Transición de estado no permitida.');
         }
 
         $evento->update([
             'estado' => 'aprobado',
-            'user_aprobador_id' => Auth::id()
+            'user_aprobador_id' => Auth::id(),
         ]);
+
+        app(EmailService::class)->notificarDecisionComite($evento->fresh());
 
         return back()->with('success', 'Evento aprobado. El Comité ya puede planificar.');
     }
 
     public function rechazar(Request $request, Evento $evento)
     {
-        if (!Auth::user()->tieneAlgunRol(['Pastor Principal'])) {
-             abort(403, 'No autorizado.');
+        if (! Auth::user()->tieneAlgunRol(['Pastor Principal'])) {
+            abort(403, 'No autorizado.');
+        }
+
+        if ($evento->estado !== 'pendiente') {
+            abort(409, 'Transición de estado no permitida.');
         }
 
         $request->validate(['motivo_rechazo' => 'required|string|max:500']);
@@ -134,16 +193,18 @@ class EventoController extends Controller
         $evento->update([
             'estado' => 'rechazado',
             'motivo_rechazo' => $request->motivo_rechazo,
-            'user_aprobador_id' => Auth::id()
+            'user_aprobador_id' => Auth::id(),
         ]);
+
+        app(EmailService::class)->notificarDecisionComite($evento->fresh());
 
         return back()->with('success', 'Evento rechazado y notificado al Comité.');
     }
 
     public function planificar(Evento $evento)
     {
-        if (!Auth::user()->tieneAlgunRol(['Comité de Eventos', 'Administrador'])) {
-             abort(403, 'No autorizado.');
+        if (! Auth::user()->tieneRol('Comité de Eventos')) {
+            abort(403, 'No autorizado.');
         }
 
         if ($evento->estado !== 'aprobado') {
@@ -155,13 +216,24 @@ class EventoController extends Controller
         return back()->with('success', 'Evento planificado. Ahora la Secretaría puede enviar convocatorias.');
     }
 
-        public function finalizar(Evento $evento)
+    public function finalizar(Evento $evento)
     {
-        if (!Auth::user()->tieneAlgunRol(['Secretaría', 'Administrador'])) {
-             abort(403);
+        if (! Auth::user()->tieneRol('Secretaría')) {
+            abort(403);
         }
-        
+
+        if (! in_array($evento->estado, ['aprobado', 'planificado'], true)) {
+            abort(409, 'Transición de estado no permitida.');
+        }
+
+        $fechaReferencia = $evento->fecha_fin ?? $evento->fecha_inicio;
+
+        if ($fechaReferencia?->isFuture()) {
+            abort(409, 'Transición de estado no permitida.');
+        }
+
         $evento->update(['estado' => 'finalizado']);
+
         return back()->with('success', 'Evento finalizado. El acta en PDF ya está disponible.');
     }
 
@@ -174,5 +246,4 @@ class EventoController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre']);
     }
-
 }

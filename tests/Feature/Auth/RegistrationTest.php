@@ -30,7 +30,7 @@ class RegistrationTest extends TestCase
         ]);
 
         $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $response->assertRedirect(route('auth.pending'));
         $this->assertDatabaseHas('users', [
             'nombre' => 'Test User',
             'email' => 'test@example.com',
@@ -54,9 +54,54 @@ class RegistrationTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'Password123',
             'password_confirmation' => 'Password123',
-        ])->assertRedirect(route('dashboard', absolute: false));
+        ])->assertRedirect(route('auth.pending'));
 
         $this->assertDatabaseHas('roles', ['nombre' => 'Miembro']);
         $this->assertDatabaseHas('miembros', ['estado_miembro' => 'pendiente']);
+    }
+
+    public function test_pending_member_cannot_access_dashboard_or_events(): void
+    {
+        $role = Role::create(['nombre' => 'Miembro']);
+        $user = User::create([
+            'nombre' => 'Pending member',
+            'email' => 'pending@example.test',
+            'password' => 'password',
+            'estado' => 'pendiente',
+        ]);
+        $user->roles()->attach($role);
+        $user->miembro()->create(['estado_miembro' => 'pendiente']);
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertRedirect(route('auth.pending'));
+
+        $this->get(route('eventos.index'))
+            ->assertRedirect(route('auth.pending'));
+
+        $this->get(route('auth.pending'))
+            ->assertOk()
+            ->assertSee('Cuenta en revisión');
+    }
+
+    public function test_pending_member_login_lands_on_review_notice(): void
+    {
+        $role = Role::create(['nombre' => 'Miembro']);
+        $user = User::create([
+            'nombre' => 'Pending login',
+            'email' => 'pending-login@example.test',
+            'password' => 'password',
+            'estado' => 'pendiente',
+        ]);
+        $user->roles()->attach($role);
+        $user->miembro()->create(['estado_miembro' => 'pendiente']);
+
+        $this->followingRedirects()
+            ->post('/login', [
+                'email' => 'pending-login@example.test',
+                'password' => 'password',
+            ])
+            ->assertOk()
+            ->assertSee('Cuenta en revisión');
     }
 }

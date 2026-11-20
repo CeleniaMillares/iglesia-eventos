@@ -1,25 +1,24 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
+    <div class="mb-4">
+        <span class="metric-icon metric-icon-primary mb-3"><i class="bi bi-key" aria-hidden="true"></i></span>
+        <h1 class="h2 fw-bold mb-2">Recuperar contraseña</h1>
+        <p class="text-secondary mb-0">Indica el correo asociado a tu cuenta y te enviaremos un enlace para restablecerla.</p>
     </div>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <x-auth-session-status class="alert alert-success py-2" :status="session('status')" />
 
     <form method="POST" action="{{ route('password.email') }}">
         @csrf
-
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+        <div class="mb-4">
+            <label for="email" class="form-label fw-semibold">Correo electrónico</label>
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+                <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus autocomplete="username" class="form-control @error('email') is-invalid @enderror">
+            </div>
+            @error('email')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
-        </div>
+        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+            <i class="bi bi-send me-2" aria-hidden="true"></i>Enviar enlace de recuperación
+        </button>
     </form>
 </x-guest-layout>

@@ -6,7 +6,9 @@ use App\Models\ConfirmacionAsistencia;
 use App\Models\Convocatoria;
 use App\Models\Evento;
 use App\Models\Miembro;
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\EventoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -68,10 +70,12 @@ class FactorySchemaTest extends TestCase
 
     public function test_event_seeder_populates_planning_fields(): void
     {
-        $comite = User::factory()->create(['email' => 'comite@iglesia.com']);
-        $pastor = User::factory()->create(['email' => 'pastor@iglesia.com']);
+        $comite = User::factory()->create(['email' => 'comite@gmail.com']);
+        $comite->roles()->attach(Role::firstOrCreate(['nombre' => 'Comité de Eventos']));
+        $pastor = User::factory()->create(['email' => 'pastor@gmail.com']);
+        $pastor->roles()->attach(Role::firstOrCreate(['nombre' => 'Pastor Principal']));
 
-        $this->seed(\Database\Seeders\EventoSeeder::class);
+        $this->seed(EventoSeeder::class);
 
         $evento = Evento::where('nombre', 'Vigilia de Oración')->firstOrFail();
 
