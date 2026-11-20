@@ -1,7 +1,4 @@
 <x-app-layout>
-    @push('styles')
-        @vite('resources/css/bootstrap.css')
-    @endpush
     <div class="surface-card p-3 p-md-4">
         <div class="mb-4">
             <h2 class="h3 mb-1">Registrar miembro</h2>

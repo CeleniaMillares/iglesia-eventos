@@ -56,12 +56,12 @@ class User extends Authenticatable
 
     public function tieneRol(string $nombreRol): bool
     {
-        return $this->roles()->where('nombre', $nombreRol)->exists();
+        return $this->roles->contains('nombre', $nombreRol);
     }
 
     public function tieneAlgunRol(array $roles): bool
     {
-        return $this->roles()->whereIn('nombre', $roles)->exists();
+        return $this->roles->contains(fn ($rol) => in_array($rol->nombre, $roles, true));
     }
 
     public function hasRole(string $nombreRol): bool

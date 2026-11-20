@@ -21,11 +21,17 @@ class DashboardController extends Controller
 
         if ($user->tieneRol('Administrador')) {
             $rolDashboard = 'Administrador';
+            $conteoEventos = Evento::query()
+                ->selectRaw(
+                    'COUNT(*) as total, COUNT(CASE WHEN estado = ? THEN 1 END) as pendientes',
+                    ['pendiente']
+                )
+                ->first();
             $metricas = [
                 ['label' => 'Total usuarios', 'value' => User::count()],
                 ['label' => 'Miembros activos', 'value' => Miembro::where('estado_miembro', 'activo')->count()],
-                ['label' => 'Total eventos', 'value' => Evento::count()],
-                ['label' => 'Eventos pendientes', 'value' => Evento::where('estado', 'pendiente')->count()],
+                ['label' => 'Total eventos', 'value' => (int) $conteoEventos->total],
+                ['label' => 'Eventos pendientes', 'value' => (int) $conteoEventos->pendientes],
             ];
             $accesosRapidos = [
                 ['label' => 'Configuración general', 'url' => route('configuraciones.index')],
@@ -39,11 +45,19 @@ class DashboardController extends Controller
             }
         } elseif ($user->tieneRol('Pastor Principal')) {
             $rolDashboard = 'Pastor Principal';
+            $conteoEventos = Evento::query()
+                ->selectRaw(
+                    'COUNT(CASE WHEN estado = ? THEN 1 END) as pendientes,
+                     COUNT(CASE WHEN estado IN (?, ?) THEN 1 END) as aprobados,
+                     COUNT(CASE WHEN fecha_inicio >= ? THEN 1 END) as proximos',
+                    ['pendiente', ...Evento::ESTADOS_CONFIRMABLES, today()->toDateString()]
+                )
+                ->first();
             $metricas = [
-                ['label' => 'Eventos pendientes', 'value' => Evento::where('estado', 'pendiente')->count()],
-                ['label' => 'Eventos aprobados y planificados', 'value' => Evento::whereIn('estado', Evento::ESTADOS_CONFIRMABLES)->count()],
+                ['label' => 'Eventos pendientes', 'value' => (int) $conteoEventos->pendientes],
+                ['label' => 'Eventos aprobados y planificados', 'value' => (int) $conteoEventos->aprobados],
                 ['label' => 'Miembros activos', 'value' => Miembro::where('estado_miembro', 'activo')->count()],
-                ['label' => 'Próximos eventos', 'value' => Evento::where('fecha_inicio', '>=', today()->toDateString())->count()],
+                ['label' => 'Próximos eventos', 'value' => (int) $conteoEventos->proximos],
             ];
             $accesosRapidos = [
                 ['label' => 'Bandeja de eventos pendientes', 'url' => route('eventos.index', ['estado' => 'pendiente'])],
@@ -75,8 +89,16 @@ class DashboardController extends Controller
             $rolDashboard = 'Miembro';
             $miembroId = $user->miembro?->id;
             $confirmaciones = ConfirmacionAsistencia::query()
-                ->where('miembro_id', $miembroId)
-                ->where('estado', 'confirmada');
+                ->where('confirmaciones_asistencia.miembro_id', $miembroId)
+                ->where('confirmaciones_asistencia.estado', 'confirmada');
+            $conteoConfirmaciones = (clone $confirmaciones)
+                ->join('eventos', 'eventos.id', '=', 'confirmaciones_asistencia.evento_id')
+                ->selectRaw(
+                    'COUNT(DISTINCT confirmaciones_asistencia.id) as total,
+                     COUNT(CASE WHEN eventos.fecha_inicio < ? THEN 1 END) as pasadas',
+                    [today()->toDateString()]
+                )
+                ->first();
             $eventosEsteMes = $miembroId
                 ? Evento::whereIn('estado', Evento::ESTADOS_CONFIRMABLES)
                     ->whereBetween('fecha_inicio', [now()->startOfMonth()->toDateString(), now()->endOfMonth()->toDateString()])
@@ -94,14 +116,9 @@ class DashboardController extends Controller
                             ->count()
                         : 0,
                 ],
-                ['label' => 'Mis confirmaciones', 'value' => (clone $confirmaciones)->count()],
+                ['label' => 'Mis confirmaciones', 'value' => (int) $conteoConfirmaciones->total],
                 ['label' => 'Eventos este mes', 'value' => $eventosEsteMes],
-                [
-                    'label' => 'Asistencia pasada',
-                    'value' => (clone $confirmaciones)
-                        ->whereHas('evento', fn ($query) => $query->where('fecha_inicio', '<', today()->toDateString()))
-                        ->count(),
-                ],
+                ['label' => 'Asistencia pasada', 'value' => (int) $conteoConfirmaciones->pasadas],
             ];
             $accesosRapidos = [
                 ['label' => 'Ver eventos disponibles', 'url' => route('eventos.index')],
@@ -109,11 +126,17 @@ class DashboardController extends Controller
             ];
         } elseif ($user->tieneRol('Comité de Eventos')) {
             $rolDashboard = 'Comité de Eventos';
-            $misEventos = Evento::where('user_creador_id', $user->id);
+            $conteoMisEventos = Evento::where('user_creador_id', $user->id)
+                ->selectRaw(
+                    'COUNT(*) as total, COUNT(CASE WHEN estado = ? THEN 1 END) as pendientes,
+                     COUNT(CASE WHEN estado IN (?, ?) THEN 1 END) as aprobados',
+                    ['pendiente', ...Evento::ESTADOS_CONFIRMABLES]
+                )
+                ->first();
             $metricas = [
-                ['label' => 'Mis eventos', 'value' => (clone $misEventos)->count()],
-                ['label' => 'Mis propuestas pendientes', 'value' => (clone $misEventos)->where('estado', 'pendiente')->count()],
-                ['label' => 'Mis eventos aprobados', 'value' => (clone $misEventos)->whereIn('estado', Evento::ESTADOS_CONFIRMABLES)->count()],
+                ['label' => 'Mis eventos', 'value' => (int) $conteoMisEventos->total],
+                ['label' => 'Mis propuestas pendientes', 'value' => (int) $conteoMisEventos->pendientes],
+                ['label' => 'Mis eventos aprobados', 'value' => (int) $conteoMisEventos->aprobados],
             ];
             $accesosRapidos = [
                 ['label' => 'Crear evento', 'url' => route('eventos.create')],
